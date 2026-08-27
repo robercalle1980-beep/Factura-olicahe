@@ -90,13 +90,22 @@
   .obra-head input{font-weight:700;font-family:var(--font-display);font-size:14.5px;border:none;background:transparent;padding:4px 2px;}
   .obra-head input:focus{outline:none;border-bottom:1px solid var(--blue);}
   .obra-body{padding:10px;}
-  .linea-row{display:grid;grid-template-columns:1fr 70px 90px 90px 26px;gap:6px;align-items:center;margin-bottom:6px;}
-  .linea-row input{font-size:13px;padding:6px 7px;}
+  .linea-row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:flex-end;margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--line);}
+  .linea-row:last-of-type{border-bottom:none;}
+  .lf{display:flex;flex-direction:column;gap:2px;}
+  .lf label{font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-soft);font-weight:600;}
+  .lf input, .lf select{font-size:13px;padding:7px 7px;border:1px solid var(--line);border-radius:5px;background:#FDFCFA;color:var(--ink);font-family:var(--font-body);}
+  .lf-desc{flex:1 1 170px;}
+  .lf-unit{flex:0 0 84px;}
+  .lf-qty{flex:0 0 66px;}
+  .lf-rate{flex:0 0 78px;}
+  .lf-total{flex:0 0 84px;}
+  .lf-total .linea-total{font-family:var(--font-mono);font-size:13px;color:var(--ink);text-align:right;padding:7px 2px;}
+  .lf-remove{flex:0 0 24px;}
   .linea-total{font-family:var(--font-mono);font-size:12.5px;color:var(--ink-soft);text-align:right;}
-  .linea-remove{background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;line-height:1;}
+  .linea-remove{background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;line-height:1;padding:6px;}
   .linea-remove:hover{color:#7c2f1c;}
   .obra-remove{margin-left:auto;background:none;border:none;color:var(--danger);font-size:13px;cursor:pointer;font-weight:600;}
-  .col-labels{display:grid;grid-template-columns:1fr 70px 90px 90px 26px;gap:6px;font-size:9.5px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;letter-spacing:.3px;}
 
   /* ---------- Historial ---------- */
   .hist-item{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);font-size:12.5px;}
@@ -204,7 +213,6 @@
 
     <div class="card">
       <h2>Obras / conceptos</h2>
-      <div class="col-labels"><span>Descripción</span><span>Horas</span><span>€ / hora</span><span>Importe</span><span></span></div>
       <div id="obrasContainer"></div>
       <div class="btn-row">
         <button class="btn amber" id="addObraBtn" type="button">+ Añadir obra</button>
@@ -249,8 +257,11 @@
     obras:[]
   };
 
-  function newLinea(){ return { id: uid(), desc:"", hours:"", rate:"" }; }
+  function newLinea(){ return { id: uid(), desc:"", unit:"horas", qty:"", rate:"" }; }
   function newObra(title){ return { id: uid(), title: title || "Obra sin título", lineas:[ newLinea() ] }; }
+  function unitAbbr(u){ return u === 'm2' ? 'm²' : 'h'; }
+  function unitRateLabel(u){ return u === 'm2' ? '€ / m²' : '€ / hora'; }
+  function unitQtyLabel(u){ return u === 'm2' ? 'm²' : 'Horas'; }
 
   state.obras.push(newObra("Obra 1"));
 
@@ -262,7 +273,7 @@
   function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
   function obraSubtotal(obra){
-    return obra.lineas.reduce(function(acc,l){ return acc + num(l.hours)*num(l.rate); }, 0);
+    return obra.lineas.reduce(function(acc,l){ return acc + num(l.qty)*num(l.rate); }, 0);
   }
   function calcTotals(){
     var subtotal = state.obras.reduce(function(acc,o){ return acc + obraSubtotal(o); }, 0);
@@ -409,13 +420,17 @@
   function renderObras(){
     obrasContainer.innerHTML = state.obras.map(function(obra){
       var lineasHtml = obra.lineas.map(function(l){
-        var total = num(l.hours)*num(l.rate);
+        var total = num(l.qty)*num(l.rate);
         return '<div class="linea-row" data-obra="'+obra.id+'" data-linea="'+l.id+'">'+
-          '<input data-f="desc" placeholder="Descripción del trabajo" value="'+escapeAttr(l.desc)+'">'+
-          '<input data-f="hours" type="number" step="0.25" min="0" placeholder="0" value="'+escapeAttr(l.hours)+'">'+
-          '<input data-f="rate" type="number" step="0.5" min="0" placeholder="0.00" value="'+escapeAttr(l.rate)+'">'+
-          '<div class="linea-total">'+fmt(total)+' €</div>'+
-          '<button class="linea-remove" data-action="del-linea" title="Eliminar línea">×</button>'+
+          '<div class="lf lf-desc"><label>Descripción</label><input data-f="desc" placeholder="Descripción del trabajo" value="'+escapeAttr(l.desc)+'"></div>'+
+          '<div class="lf lf-unit"><label>Unidad</label><select data-f="unit">'+
+            '<option value="horas"'+(l.unit==='horas'?' selected':'')+'>Horas</option>'+
+            '<option value="m2"'+(l.unit==='m2'?' selected':'')+'>m²</option>'+
+          '</select></div>'+
+          '<div class="lf lf-qty"><label>'+unitQtyLabel(l.unit)+'</label><input data-f="qty" type="number" step="0.25" min="0" placeholder="0" value="'+escapeAttr(l.qty)+'"></div>'+
+          '<div class="lf lf-rate"><label>'+unitRateLabel(l.unit)+'</label><input data-f="rate" type="number" step="0.5" min="0" placeholder="0.00" value="'+escapeAttr(l.rate)+'"></div>'+
+          '<div class="lf lf-total"><label>Importe</label><div class="linea-total">'+fmt(total)+' €</div></div>'+
+          '<div class="lf lf-remove"><label>&nbsp;</label><button class="linea-remove" data-action="del-linea" title="Eliminar línea">×</button></div>'+
           '</div>';
       }).join('');
 
@@ -436,11 +451,11 @@
     return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   }
 
-  obrasContainer.addEventListener('input', function(e){
+  function handleLineaFieldChange(e){
     var titleId = e.target.getAttribute('data-obra-title');
     if(titleId){
-      var obra = state.obras.find(function(o){ return o.id == titleId; });
-      if(obra){ obra.title = e.target.value; renderPreview(); }
+      var obraT = state.obras.find(function(o){ return o.id == titleId; });
+      if(obraT){ obraT.title = e.target.value; renderPreview(); }
       return;
     }
     var f = e.target.getAttribute('data-f');
@@ -453,11 +468,17 @@
     var linea = obra.lineas.find(function(l){ return l.id == lineaId; });
     if(!linea) return;
     linea[f] = e.target.value;
-    if(f === 'hours' || f === 'rate'){
-      row.querySelector('.linea-total').textContent = fmt(num(linea.hours)*num(linea.rate)) + ' €';
+    if(f === 'qty' || f === 'rate'){
+      row.querySelector('.linea-total').textContent = fmt(num(linea.qty)*num(linea.rate)) + ' €';
+    }
+    if(f === 'unit'){
+      row.querySelector('.lf-qty label').textContent = unitQtyLabel(linea.unit);
+      row.querySelector('.lf-rate label').textContent = unitRateLabel(linea.unit);
     }
     renderPreview();
-  });
+  }
+  obrasContainer.addEventListener('input', handleLineaFieldChange);
+  obrasContainer.addEventListener('change', handleLineaFieldChange);
 
   obrasContainer.addEventListener('click', function(e){
     var action = e.target.getAttribute('data-action');
@@ -507,8 +528,8 @@
     state.obras.forEach(function(obra){
       rowsHtml += '<tr class="obra-title-row"><td colspan="3">'+ (obra.title || 'Obra') +'</td></tr>';
       obra.lineas.forEach(function(l){
-        if(!l.desc && !num(l.hours) && !num(l.rate)) return;
-        rowsHtml += '<tr><td>'+ (l.desc || '—') +'</td><td class="num">'+ fmt(num(l.hours)) +' h × '+ fmt(num(l.rate)) +' €</td><td class="num">'+ fmt(num(l.hours)*num(l.rate)) +' €</td></tr>';
+        if(!l.desc && !num(l.qty) && !num(l.rate)) return;
+        rowsHtml += '<tr><td>'+ (l.desc || '—') +'</td><td class="num">'+ fmt(num(l.qty)) +' '+unitAbbr(l.unit)+' × '+ fmt(num(l.rate)) +' €</td><td class="num">'+ fmt(num(l.qty)*num(l.rate)) +' €</td></tr>';
       });
     });
     if(!rowsHtml){
@@ -528,7 +549,7 @@
         '<div class="meta"><b>Nº</b> '+ (state.invoice.number || '—') +'<br><b>Fecha</b> '+ (state.invoice.date || '—') +'</div>'+
       '</div>'+
       '<div class="sheet-client">'+ clientHtml +'</div>'+
-      '<table class="sheet-table"><thead><tr><th>Descripción</th><th style="text-align:right">Horas × Precio</th><th style="text-align:right">Importe</th></tr></thead>'+
+      '<table class="sheet-table"><thead><tr><th>Descripción</th><th style="text-align:right">Cantidad × Precio</th><th style="text-align:right">Importe</th></tr></thead>'+
       '<tbody>'+ rowsHtml +'</tbody></table>'+
       '<div class="sheet-totals">'+
         '<div><span>Subtotal</span><span>'+ fmt(totals.subtotal) +' €</span></div>'+
@@ -570,7 +591,18 @@
         if(!snap) return;
         state.client = snap.client;
         state.invoice = snap.invoice;
-        state.obras = snap.obras;
+        // Compatibilidad con facturas guardadas antes de añadir la unidad (horas/m²)
+        state.obras = (snap.obras || []).map(function(o){
+          o.lineas = (o.lineas || []).map(function(l){
+            if(l.qty === undefined){
+              l.qty = l.hours !== undefined ? l.hours : "";
+              l.unit = l.unit || "horas";
+              delete l.hours;
+            }
+            return l;
+          });
+          return o;
+        });
         uidCounter = (snap.uidCounter || uidCounter) + 1;
         fillStaticInputs(); renderObras(); renderPreview();
       });
@@ -645,15 +677,15 @@
     state.obras.forEach(function(obra){
       body.push([{ content: obra.title || 'Obra', colSpan:3, styles:{ fillColor:[245,243,236], fontStyle:'bold', textColor:[27,43,53] } }]);
       obra.lineas.forEach(function(l){
-        if(!l.desc && !num(l.hours) && !num(l.rate)) return;
-        body.push([ l.desc || '—', fmt(num(l.hours))+' h × '+fmt(num(l.rate))+' €', fmt(num(l.hours)*num(l.rate))+' €' ]);
+        if(!l.desc && !num(l.qty) && !num(l.rate)) return;
+        body.push([ l.desc || '—', fmt(num(l.qty))+' '+unitAbbr(l.unit)+' × '+fmt(num(l.rate))+' €', fmt(num(l.qty)*num(l.rate))+' €' ]);
       });
     });
     if(body.length === 0){ body.push(['Sin conceptos','','']); }
 
     doc.autoTable({
       startY: cursorY,
-      head: [['Descripción','Horas × Precio','Importe']],
+      head: [['Descripción','Cantidad × Precio','Importe']],
       body: body,
       theme: 'plain',
       margin:{left:marginX, right:marginX},
